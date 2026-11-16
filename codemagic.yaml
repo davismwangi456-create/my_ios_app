@@ -1,17 +1,33 @@
 workflows:
   ios-workflow:
-    name: iOS TestFlight Build
+    name: iOS TestFlight Build & Publish
     max_build_duration: 60
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
+      # Reference your App Store Connect credentials here if needed
     scripts:
       - name: Install dependencies
         script: |
           flutter pub get
-      - name: Build iOS release
+      - name: Set up code signing
         script: |
-          flutter build ios --release --no-codesign
+          # Codemagic automated code signing command
+          app-store-connect fetch-signing-files "$(xcode-project detect-bundle-id)" --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" --key-identifier "$APP_STORE_CONNECT_KEY_IDENTIFIER"
+          xcode-project use-profiles
+      - name: Build iOS release and IPA
+        script: |
+          flutter build ipa --release
     artifacts:
       - build/ios/ipa/*.ipa
+    publishing:
+      email:
+        recipients:
+          - your_email@gmail.com
+      app_store_connect:
+        auth:
+          issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+          key_identifier: $APP_STORE_CONNECT_KEY_IDENTIFIER
+          private_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        submit_to_testflight: true
